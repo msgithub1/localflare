@@ -1,7 +1,7 @@
 from localflare import LocalFlare
 import os
 
-app = LocalFlare(__name__, title="LocalFlare Proxy Demo")
+app = LocalFlare(__name__, title="LocalFlare Demo")
 
 # 注册消息处理器
 @app.on_message('get_system_info')
@@ -31,7 +31,7 @@ def index():
     return '''
     <html>
         <head>
-            <title>LocalFlare Proxy Demo</title>
+            <title>LocalFlare Demo</title>
             <style>
                 body {
                     font-family: Arial, sans-serif;
@@ -66,7 +66,7 @@ def index():
             </style>
         </head>
         <body>
-            <h1>LocalFlare Proxy Demo</h1>
+            <h1>LocalFlare Demo</h1>
             
             <div class="card">
                 <h2>系统信息</h2>

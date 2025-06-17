@@ -57,6 +57,7 @@ class LocalFlare:
     def _get_js_proxy_code(self) -> str:
         """生成JavaScript Proxy代码"""
         return '''
+        <script>
         const createProxy = () => {
             const handler = {
                 get: function(target, prop) {
@@ -95,11 +96,27 @@ class LocalFlare:
 
         // 创建全局代理对象
         window.api = createProxy();
+        </script>
         '''
 
     def route(self, rule: str, **options) -> Callable:
         """装饰器：添加URL规则"""
-        return self.flask_app.route(rule, **options)
+        def decorator(f):
+            @self.flask_app.route(rule, **options)
+            def wrapper(*args, **kwargs):
+                result = f(*args, **kwargs)
+                # 如果返回的是HTML字符串，注入Proxy代码
+                if isinstance(result, str) and '<html' in result.lower():
+                    # 在</head>标签前注入Proxy代码
+                    proxy_code = self._get_js_proxy_code()
+                    if '</head>' in result:
+                        result = result.replace('</head>', f'{proxy_code}</head>')
+                    else:
+                        # 如果没有head标签，在body开始处注入
+                        result = result.replace('<body', f'<head>{proxy_code}</head><body')
+                return result
+            return wrapper
+        return decorator
 
     def _wait_for_server(self, timeout: int = 10) -> bool:
         """等待服务器启动"""
