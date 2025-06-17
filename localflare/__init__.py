@@ -130,7 +130,7 @@ class LocalFlare:
                 time.sleep(0.1)
         return False
 
-    def run(self, host: str = '127.0.0.1', port: int = 5000, debug: bool = False,
+    def run(self, host: str = '127.0.0.1', port: int = 9517, debug: bool = False,
             template_folder: Optional[str] = None) -> None:
         """运行应用"""
         self._host = host

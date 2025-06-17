@@ -7,7 +7,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-app = LocalFlare(__name__, title="LocalFlare 高级演示")
+app = LocalFlare(__name__, title="LocalFlare Demo")
 
 # 系统信息
 @app.on_message('get_system_info')
@@ -395,4 +395,4 @@ def index():
     '''
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run() # debug=True 
