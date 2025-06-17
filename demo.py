@@ -1,11 +1,8 @@
 from localflare import LocalFlare
 import os
 import psutil
-import json
-import time
 import shutil
 from datetime import datetime
-from pathlib import Path
 
 app = LocalFlare(__name__, title="LocalFlare Demo")
 

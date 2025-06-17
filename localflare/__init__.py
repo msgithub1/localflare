@@ -1,14 +1,11 @@
 import webview
 import threading
 from flask import Flask, render_template_string, jsonify, request
-import webbrowser
 import os
-import sys
 import time
 import requests
 from werkzeug.serving import make_server
 from typing import Optional, Callable, Any, Dict
-import json
 
 class LocalFlare:
     def __init__(self, import_name: str, title: str = "LocalFlare App"):
