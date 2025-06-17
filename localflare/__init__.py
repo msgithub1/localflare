@@ -13,7 +13,7 @@ class LocalFlare:
         self.title = title
         self.window = None
         self._thread = None
-        self._port = 5000
+        self._port = 9517
         self._host = '127.0.0.1'
         self._debug = False
         self._template_folder = None
@@ -91,7 +91,6 @@ class LocalFlare:
             return new Proxy({}, handler);
         };
 
-        // 创建全局代理对象
         window.api = createProxy();
         </script>
         '''
