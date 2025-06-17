@@ -1,13 +1,14 @@
 import webview
 import threading
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, jsonify, request
 import webbrowser
 import os
 import sys
 import time
 import requests
 from werkzeug.serving import make_server
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, Dict
+import json
 
 class LocalFlare:
     def __init__(self, import_name: str, title: str = "LocalFlare App"):
@@ -20,6 +21,38 @@ class LocalFlare:
         self._debug = False
         self._template_folder = None
         self._server = None
+        self._message_handlers: Dict[str, Callable] = {}
+
+        # 添加默认的API路由
+        self._setup_default_routes()
+
+    def _setup_default_routes(self):
+        """设置默认的API路由"""
+        @self.flask_app.route('/api/send', methods=['POST'])
+        def send_message():
+            data = request.get_json()
+            if not data or 'type' not in data:
+                return jsonify({'error': 'Invalid message format'}), 400
+            
+            message_type = data['type']
+            if message_type in self._message_handlers:
+                try:
+                    result = self._message_handlers[message_type](data.get('data', {}))
+                    return jsonify({'success': True, 'result': result})
+                except Exception as e:
+                    return jsonify({'error': str(e)}), 500
+            return jsonify({'error': f'No handler for message type: {message_type}'}), 404
+
+        @self.flask_app.route('/api/ping', methods=['GET'])
+        def ping():
+            return jsonify({'status': 'ok'})
+
+    def on_message(self, message_type: str):
+        """装饰器：注册消息处理器"""
+        def decorator(f):
+            self._message_handlers[message_type] = f
+            return f
+        return decorator
 
     def route(self, rule: str, **options) -> Callable:
         """装饰器：添加URL规则"""
@@ -30,7 +63,7 @@ class LocalFlare:
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                response = requests.get(f'http://{self._host}:{self._port}/')
+                response = requests.get(f'http://{self._host}:{self._port}/api/ping')
                 if response.status_code == 200:
                     return True
             except requests.exceptions.ConnectionError:
