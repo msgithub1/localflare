@@ -1,7 +1,7 @@
 from localflare import LocalFlare
 import os
 
-app = LocalFlare(__name__, title="LocalFlare API Demo")
+app = LocalFlare(__name__, title="LocalFlare Proxy Demo")
 
 # 注册消息处理器
 @app.on_message('get_system_info')
@@ -31,7 +31,7 @@ def index():
     return '''
     <html>
         <head>
-            <title>LocalFlare API Demo</title>
+            <title>LocalFlare Proxy Demo</title>
             <style>
                 body {
                     font-family: Arial, sans-serif;
@@ -66,7 +66,7 @@ def index():
             </style>
         </head>
         <body>
-            <h1>LocalFlare API Demo</h1>
+            <h1>LocalFlare Proxy Demo</h1>
             
             <div class="card">
                 <h2>系统信息</h2>
@@ -82,32 +82,10 @@ def index():
             </div>
 
             <script>
-                async function sendMessage(type, data = {}) {
-                    try {
-                        const response = await fetch('/api/send', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                type: type,
-                                data: data
-                            })
-                        });
-                        const result = await response.json();
-                        if (!result.success) {
-                            throw new Error(result.error);
-                        }
-                        return result.result;
-                    } catch (error) {
-                        console.error('Error:', error);
-                        throw error;
-                    }
-                }
-
+                // 使用Proxy API调用
                 async function getSystemInfo() {
                     try {
-                        const info = await sendMessage('get_system_info');
+                        const info = await window.api.get_system_info();
                         document.getElementById('systemInfo').textContent = 
                             JSON.stringify(info, null, 2);
                     } catch (error) {
@@ -124,9 +102,7 @@ def index():
                     }
 
                     try {
-                        const result = await sendMessage('read_file', {
-                            path: filePath
-                        });
+                        const result = await window.api.read_file({ path: filePath });
                         document.getElementById('fileContent').textContent = 
                             result.content;
                     } catch (error) {

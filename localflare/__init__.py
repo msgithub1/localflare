@@ -54,6 +54,49 @@ class LocalFlare:
             return f
         return decorator
 
+    def _get_js_proxy_code(self) -> str:
+        """生成JavaScript Proxy代码"""
+        return '''
+        const createProxy = () => {
+            const handler = {
+                get: function(target, prop) {
+                    if (typeof prop === 'symbol') {
+                        return target[prop];
+                    }
+                    
+                    return async function(...args) {
+                        try {
+                            const response = await fetch('/api/send', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    type: prop,
+                                    data: args[0] || {}
+                                })
+                            });
+                            
+                            const result = await response.json();
+                            if (!result.success) {
+                                throw new Error(result.error);
+                            }
+                            return result.result;
+                        } catch (error) {
+                            console.error('Error:', error);
+                            throw error;
+                        }
+                    };
+                }
+            };
+            
+            return new Proxy({}, handler);
+        };
+
+        // 创建全局代理对象
+        window.api = createProxy();
+        '''
+
     def route(self, rule: str, **options) -> Callable:
         """装饰器：添加URL规则"""
         return self.flask_app.route(rule, **options)
