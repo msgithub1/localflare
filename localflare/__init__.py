@@ -7,6 +7,7 @@ import requests
 from werkzeug.serving import make_server
 from typing import Optional, Callable, Any, Dict, Set
 import uuid
+import re
 
 class LocalFlare:
     def __init__(self, import_name: str, title: str = "LocalFlare App"):
@@ -110,6 +111,21 @@ class LocalFlare:
         </script>
         '''
 
+    def _inject_proxy_code(self, html: str) -> str:
+        """使用正则表达式注入代理代码"""
+        proxy_code = self._get_js_proxy_code()
+        
+        # 尝试在</head>标签前注入
+        if re.search(r'</head>', html, re.IGNORECASE):
+            return re.sub(r'</head>', f'{proxy_code}</head>', html, flags=re.IGNORECASE)
+        
+        # 如果没有head标签，尝试在第一个<body>标签后注入
+        if re.search(r'<body[^>]*>', html, re.IGNORECASE):
+            return re.sub(r'(<body[^>]*>)', f'\\1{proxy_code}', html, flags=re.IGNORECASE)
+        
+        # 如果都没有，在文档开始处注入
+        return f'{proxy_code}{html}'
+
     def on_message(self, message_type: str):
         """装饰器：注册消息处理器"""
         def decorator(f):
@@ -125,13 +141,7 @@ class LocalFlare:
                 result = f(*args, **kwargs)
                 # 如果返回的是HTML字符串，注入Proxy代码
                 if isinstance(result, str) and '<html' in result.lower():
-                    # 在</head>标签前注入Proxy代码
-                    proxy_code = self._get_js_proxy_code()
-                    if '</head>' in result:
-                        result = result.replace('</head>', f'{proxy_code}</head>')
-                    else:
-                        # 如果没有head标签，在body开始处注入
-                        result = result.replace('<body', f'<head>{proxy_code}</head><body')
+                    result = self._inject_proxy_code(result)
                 return result
             return wrapper
         return decorator
