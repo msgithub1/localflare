@@ -60,6 +60,7 @@ def create_file(data):
     try:
         with open(path, 'w', encoding='utf-8') as f:
             f.write(content)
+            f.close()
         return {'success': True}
     except Exception as e:
         raise ValueError(f"Error creating file: {str(e)}")
