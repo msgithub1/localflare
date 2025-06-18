@@ -17,7 +17,7 @@ class LocalFlare:
         self._port = 5000
         self._host = '127.0.0.1'
         self._debug = False
-        self._template_folder = None
+        self._template_folder = "."
         self._server = None
         self._message_handlers: Dict[str, Callable] = {}
         self._valid_tokens: Set[str] = set()  # 存储有效的token
@@ -149,7 +149,7 @@ class LocalFlare:
         return False
 
     def run(self, host: str = '127.0.0.1', port: int = 5000, debug: bool = False,
-            template_folder: Optional[str] = None) -> None:
+            template_folder: Optional[str] = ".") -> None:
         """运行应用"""
         self._host = host
         self._port = port

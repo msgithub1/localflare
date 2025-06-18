@@ -1,0 +1,255 @@
+<html>
+    <head>
+        <title>LocalFlare 高级演示</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #f5f5f5;
+            }
+            .card {
+                background: white;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+            button {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 4px;
+                cursor: pointer;
+                margin: 5px;
+            }
+            button:hover {
+                background: #45a049;
+            }
+            button.danger {
+                background: #f44336;
+            }
+            button.danger:hover {
+                background: #da190b;
+            }
+            input, select {
+                padding: 8px;
+                margin: 5px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                width: calc(100% - 20px);
+            }
+            pre {
+                background: #f8f8f8;
+                padding: 10px;
+                border-radius: 4px;
+                overflow-x: auto;
+                max-height: 300px;
+                overflow-y: auto;
+            }
+            .file-item {
+                display: flex;
+                align-items: center;
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+            }
+            .file-item:hover {
+                background: #f5f5f5;
+            }
+            .file-icon {
+                margin-right: 10px;
+                color: #666;
+            }
+            .process-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+            }
+            .metric-card {
+                text-align: center;
+                padding: 15px;
+            }
+            .metric-value {
+                font-size: 24px;
+                font-weight: bold;
+                color: #4CAF50;
+            }
+            .metric-label {
+                color: #666;
+                margin-top: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>LocalFlare 高级演示</h1>
+        
+        <div class="grid">
+            <!-- 系统信息 -->
+            <div class="card">
+                <h2>系统信息</h2>
+                <button onclick="getSystemInfo()">刷新系统信息</button>
+                <pre id="systemInfo"></pre>
+            </div>
+
+            <!-- 文件系统 -->
+            <div class="card">
+                <h2>文件系统</h2>
+                <input type="text" id="dirPath" placeholder="输入目录路径" value=".">
+                <button onclick="listDirectory()">列出目录</button>
+                <div id="fileList"></div>
+            </div>
+
+            <!-- 进程管理 -->
+            <div class="card">
+                <h2>进程管理</h2>
+                <button onclick="getProcesses()">刷新进程列表</button>
+                <div id="processList"></div>
+            </div>
+
+            <!-- 系统监控 -->
+            <div class="card">
+                <h2>系统监控</h2>
+                <button onclick="startMonitoring()">开始监控</button>
+                <button onclick="stopMonitoring()">停止监控</button>
+                <div id="metrics" class="grid"></div>
+            </div>
+        </div>
+
+        <script>
+            let monitoringInterval = null;
+
+            // 系统信息
+            async function getSystemInfo() {
+                try {
+                    const info = await window.api.get_system_info();
+                    document.getElementById('systemInfo').textContent = 
+                        JSON.stringify(info, null, 2);
+                } catch (error) {
+                    document.getElementById('systemInfo').textContent = 
+                        'Error: ' + error.message;
+                }
+            }
+
+            // 文件系统
+            async function listDirectory() {
+                const path = document.getElementById('dirPath').value;
+                try {
+                    const result = await window.api.list_directory({ path });
+                    const fileList = document.getElementById('fileList');
+                    fileList.innerHTML = result.items.map(item => `
+                        <div class="file-item">
+                            <span class="file-icon">${item.is_dir ? '📁' : '📄'}</span>
+                            <span>${item.name}</span>
+                            <span style="margin-left: auto">
+                                ${item.is_dir ? '' : formatSize(item.size)}
+                            </span>
+                            <button onclick="deletePath('${item.path}')" class="danger">删除</button>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            }
+
+            async function deletePath(path) {
+                if (!confirm('确定要删除吗？')) return;
+                try {
+                    await window.api.delete_path({ path });
+                    listDirectory();
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            }
+
+            // 进程管理
+            async function getProcesses() {
+                try {
+                    const result = await window.api.get_processes();
+                    const processList = document.getElementById('processList');
+                    processList.innerHTML = result.processes.map(proc => `
+                        <div class="process-item">
+                            <span>${proc.name} (${proc.pid})</span>
+                            <span>CPU: ${proc.cpu_percent.toFixed(1)}%</span>
+                            <span>内存: ${proc.memory_percent.toFixed(1)}%</span>
+                            <button onclick="killProcess(${proc.pid})" class="danger">结束</button>
+                        </div>
+                    `).join('');
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            }
+
+            async function killProcess(pid) {
+                if (!confirm('确定要结束进程吗？')) return;
+                try {
+                    await window.api.kill_process({ pid });
+                    getProcesses();
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            }
+
+            // 系统监控
+            async function updateMetrics() {
+                try {
+                    const metrics = await window.api.get_system_metrics();
+                    const metricsDiv = document.getElementById('metrics');
+                    metricsDiv.innerHTML = `
+                        <div class="metric-card">
+                            <div class="metric-value">${metrics.cpu.percent}%</div>
+                            <div class="metric-label">CPU 使用率</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${metrics.memory.percent}%</div>
+                            <div class="metric-label">内存使用率</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${metrics.disk.percent}%</div>
+                            <div class="metric-label">磁盘使用率</div>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Error updating metrics:', error);
+                }
+            }
+
+            function startMonitoring() {
+                if (monitoringInterval) return;
+                updateMetrics();
+                monitoringInterval = setInterval(updateMetrics, 1000);
+            }
+
+            function stopMonitoring() {
+                if (monitoringInterval) {
+                    clearInterval(monitoringInterval);
+                    monitoringInterval = null;
+                }
+            }
+
+            // 工具函数
+            function formatSize(bytes) {
+                const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                let size = bytes;
+                let unitIndex = 0;
+                while (size >= 1024 && unitIndex < units.length - 1) {
+                    size /= 1024;
+                    unitIndex++;
+                }
+                return `${size.toFixed(1)} ${units[unitIndex]}`;
+            }
+
+            // 初始化
+            getSystemInfo();
+            listDirectory();
+            getProcesses();
+        </script>
+    </body>
+</html>
