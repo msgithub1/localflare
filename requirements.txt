@@ -1,3 +1,4 @@
 flask==3.0.2
 pywebview==5.4
 requests==2.31.0
+PyJWT==2.8.0
