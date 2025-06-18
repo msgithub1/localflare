@@ -5,11 +5,8 @@ import os
 import time
 import requests
 from werkzeug.serving import make_server
-from typing import Optional, Callable, Any, Dict
-import json
-import jwt
-import secrets
-import datetime
+from typing import Optional, Callable, Any, Dict, Set
+import uuid
 
 class LocalFlare:
     def __init__(self, import_name: str, title: str = "LocalFlare App"):
@@ -23,40 +20,30 @@ class LocalFlare:
         self._template_folder = None
         self._server = None
         self._message_handlers: Dict[str, Callable] = {}
-        self._secret_key = secrets.token_hex(32)  # 生成随机密钥
-        self._token = None  # 存储当前会话的token
-
+        self._valid_tokens: Set[str] = set()  # 存储有效的token
+        self._current_token = self._generate_token()  # 生成初始token
+        
         # 添加默认的API路由
         self._setup_default_routes()
 
     def _generate_token(self) -> str:
-        """生成JWT token"""
-        payload = {
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1),  # 1天过期
-            'iat': datetime.datetime.utcnow(),
-            'app': self.title
-        }
-        return jwt.encode(payload, self._secret_key, algorithm='HS256')
+        """生成随机token"""
+        # 使用系统级随机数生成器
+        token = str(uuid.uuid4())
+        self._valid_tokens.add(token)
+        return token
 
     def _verify_token(self, token: str) -> bool:
-        """验证JWT token"""
-        try:
-            jwt.decode(token, self._secret_key, algorithms=['HS256'])
-            return True
-        except jwt.InvalidTokenError:
-            return False
+        """验证token"""
+        return token in self._valid_tokens
 
     def _setup_default_routes(self):
         """设置默认的API路由"""
         @self.flask_app.route('/api/send', methods=['POST'])
         def send_message():
             # 验证token
-            token = request.headers.get('Authorization')
-            if not token or not token.startswith('Bearer '):
-                return jsonify({'error': 'Missing or invalid token'}), 401
-            
-            token = token.split(' ')[1]
-            if not self._verify_token(token):
+            token = request.headers.get('X-App-Token')
+            if not token or not self._verify_token(token):
                 return jsonify({'error': 'Invalid token'}), 401
 
             data = request.get_json()
@@ -76,12 +63,52 @@ class LocalFlare:
         def ping():
             return jsonify({'status': 'ok'})
 
-        @self.flask_app.route('/api/auth', methods=['POST'])
-        def auth():
-            """获取认证token"""
-            return jsonify({
-                'token': self._generate_token()
-            })
+    def _get_js_proxy_code(self) -> str:
+        """生成JavaScript Proxy代码"""
+        return f'''
+        <script>
+        const createProxy = () => {{
+            const token = '{self._current_token}';
+
+            const handler = {{
+                get: function(target, prop) {{
+                    if (typeof prop === 'symbol') {{
+                        return target[prop];
+                    }}
+                    
+                    return async function(...args) {{
+                        try {{
+                            const response = await fetch('/api/send', {{
+                                method: 'POST',
+                                headers: {{
+                                    'Content-Type': 'application/json',
+                                    'X-App-Token': token
+                                }},
+                                body: JSON.stringify({{
+                                    type: prop,
+                                    data: args[0] || {{}}
+                                }})
+                            }});
+                            
+                            const result = await response.json();
+                            if (!result.success) {{
+                                throw new Error(result.error);
+                            }}
+                            return result.result;
+                        }} catch (error) {{
+                            console.error('Error:', error);
+                            throw error;
+                        }}
+                    }};
+                }}
+            }};
+            
+            return new Proxy({{}}, handler);
+        }};
+
+        window.api = createProxy();
+        </script>
+        '''
 
     def on_message(self, message_type: str):
         """装饰器：注册消息处理器"""
@@ -89,77 +116,6 @@ class LocalFlare:
             self._message_handlers[message_type] = f
             return f
         return decorator
-
-    def _get_js_proxy_code(self) -> str:
-        """生成JavaScript Proxy代码"""
-        return '''
-        <script>
-        const createProxy = () => {
-            let token = null;
-
-            // 获取认证token
-            async function getToken() {
-                try {
-                    const response = await fetch('/api/auth', {
-                        method: 'POST'
-                    });
-                    const data = await response.json();
-                    token = data.token;
-                } catch (error) {
-                    console.error('Error getting token:', error);
-                }
-            }
-
-            getToken();
-
-            const handler = {
-                get: function(target, prop) {
-                    if (typeof prop === 'symbol') {
-                        return target[prop];
-                    }
-                    
-                    return async function(...args) {
-                        try {
-                            if (!token) {
-                                await getToken();
-                            }
-
-                            const response = await fetch('/api/send', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                },
-                                body: JSON.stringify({
-                                    type: prop,
-                                    data: args[0] || {}
-                                })
-                            });
-
-                            if (response.status === 401) {
-                                await getToken();
-                                return handler.get(target, prop)(...args);
-                            }
-                            
-                            const result = await response.json();
-                            if (!result.success) {
-                                throw new Error(result.error);
-                            }
-                            return result.result;
-                        } catch (error) {
-                            console.error('Error:', error);
-                            throw error;
-                        }
-                    };
-                }
-            };
-            
-            return new Proxy({}, handler);
-        };
-
-        window.api = createProxy();
-        </script>
-        '''
 
     def route(self, rule: str, **options) -> Callable:
         """装饰器：添加URL规则"""
