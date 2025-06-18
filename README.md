@@ -1,22 +1,24 @@
 # LocalFlare
 
-LocalFlare 是一个轻量级的桌面应用开发框架，它结合了 Flask 的简洁性和本地浏览器的强大功能。
+[中文版本](README_zh.md)
 
-## 特点
+LocalFlare is a lightweight desktop application development framework that combines Flask's simplicity with the power of local browser functionality.
 
-- 类似 Flask 的简洁 API
-- 内置浏览器窗口
-- 本地服务进程
-- 轻量级和高性能
-- 易于使用和扩展
+## Features
 
-## 安装
+- Flask-like simple API
+- Built-in browser window
+- Local service process
+- Lightweight and high performance
+- Easy to use and extend
+
+## Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 快速开始
+## Quick Start
 
 ```python
 from localflare import LocalFlare
@@ -31,6 +33,6 @@ if __name__ == '__main__':
     app.run()
 ```
 
-## 许可证
+## License
 
 Apache-2.0
