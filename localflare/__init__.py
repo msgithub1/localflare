@@ -1,13 +1,14 @@
-import webview
-import threading
+from webview import create_window, start
+from threading import Thread
 from flask import Flask, render_template_string, jsonify, request
-import os
-import time
-import requests
+from os import path
+from time import time, sleep
+from requests import get, exceptions
 from werkzeug.serving import make_server
 from typing import Optional, Callable, Any, Dict, Set
-import uuid
-import re
+from re import search, sub, IGNORECASE
+from secrets import token_bytes
+from base64 import urlsafe_b64encode
 
 class LocalFlare:
     def __init__(self, import_name: str, title: str = "LocalFlare App"):
@@ -15,8 +16,8 @@ class LocalFlare:
         self.title = title
         self.window = None
         self._thread = None
-        self._port = 5000
         self._host = '127.0.0.1'
+        self._port = 0  # 使用0让Flask自动分配端口
         self._debug = False
         self._template_folder = "."
         self._server = None
@@ -28,9 +29,17 @@ class LocalFlare:
         self._setup_default_routes()
 
     def _generate_token(self) -> str:
-        """生成随机token"""
-        # 使用系统级随机数生成器
-        token = str(uuid.uuid4())
+        """生成随机token
+        
+        使用secrets模块生成密码学安全的随机token：
+        1. 生成32字节的随机数据
+        2. 使用base64编码，但移除填充字符
+        3. 替换URL不安全的字符
+        """
+        # 生成32字节的随机数据
+        random_bytes = token_bytes(64)
+        # 使用base64编码，但移除填充字符
+        token = urlsafe_b64encode(random_bytes).decode('ascii').rstrip('=')
         self._valid_tokens.add(token)
         return token
 
@@ -116,12 +125,12 @@ class LocalFlare:
         proxy_code = self._get_js_proxy_code()
         
         # 尝试在</head>标签前注入
-        if re.search(r'</head>', html, re.IGNORECASE):
-            return re.sub(r'</head>', f'{proxy_code}</head>', html, flags=re.IGNORECASE)
+        if search(r'</head>', html, IGNORECASE):
+            return sub(r'</head>', f'{proxy_code}</head>', html, flags=IGNORECASE)
         
         # 如果没有head标签，尝试在第一个<body>标签后注入
-        if re.search(r'<body[^>]*>', html, re.IGNORECASE):
-            return re.sub(r'(<body[^>]*>)', f'\\1{proxy_code}', html, flags=re.IGNORECASE)
+        if search(r'<body[^>]*>', html, IGNORECASE):
+            return sub(r'(<body[^>]*>)', f'\\1{proxy_code}', html, flags=IGNORECASE)
         
         # 如果都没有，在文档开始处注入
         return f'{proxy_code}{html}'
@@ -148,32 +157,35 @@ class LocalFlare:
 
     def _wait_for_server(self, timeout: int = 10) -> bool:
         """等待服务器启动"""
-        start_time = time.time()
-        while time.time() - start_time < timeout:
+        start_time = time()
+        while time() - start_time < timeout:
             try:
-                response = requests.get(f'http://{self._host}:{self._port}/api/ping')
+                response = get(f'http://{self._host}:{self._port}/api/ping')
                 if response.status_code == 200:
                     return True
-            except requests.exceptions.ConnectionError:
-                time.sleep(0.1)
+            except exceptions.ConnectionError:
+                sleep(0.1)
         return False
 
-    def run(self, host: str = '127.0.0.1', port: int = 5000, debug: bool = False,
+    def run(self, host: str = '127.0.0.1', port: Optional[int] = None, debug: bool = False,
             template_folder: Optional[str] = ".") -> None:
         """运行应用"""
         self._host = host
-        self._port = port
+        if port is not None:
+            self._port = port
         self._debug = debug
         self._template_folder = template_folder
 
         # 创建服务器
-        self._server = make_server(host, port, self.flask_app)
+        self._server = make_server(host, self._port, self.flask_app)
+        # 获取实际分配的端口
+        self._port = self._server.port
 
         # 启动Flask服务器
         def run_flask():
             self._server.serve_forever()
 
-        self._thread = threading.Thread(target=run_flask)
+        self._thread = Thread(target=run_flask)
         self._thread.daemon = True
         self._thread.start()
 
@@ -182,8 +194,8 @@ class LocalFlare:
             raise RuntimeError("服务器启动超时")
 
         # 创建窗口
-        url = f'http://{host}:{port}'
-        self.window = webview.create_window(
+        url = f'http://{host}:{self._port}'
+        self.window = create_window(
             self.title,
             url,
             width=800,
@@ -192,12 +204,12 @@ class LocalFlare:
             text_select=True,
             confirm_close=True
         )
-        webview.start(debug=debug)
+        start(debug=debug)
 
     def render_template(self, template_name: str, **context) -> str:
         """渲染模板"""
         if self._template_folder:
-            template_path = os.path.join(self._template_folder, template_name)
+            template_path = path.join(self._template_folder, template_name)
             with open(template_path, 'r', encoding='utf-8') as f:
                 template = f.read()
             return render_template_string(template, **context)
