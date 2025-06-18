@@ -212,6 +212,7 @@ class LocalFlare:
             template_path = path.join(self._template_folder, template_name)
             with open(template_path, 'r', encoding='utf-8') as f:
                 template = f.read()
+                f.close()
             return render_template_string(template, **context)
         return render_template_string(template_name, **context)
 
