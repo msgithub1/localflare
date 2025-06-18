@@ -1,0 +1,6 @@
+include LICENSE
+include README.md
+include README_zh.md
+include requirements.txt
+recursive-include localflare/templates *
+recursive-include localflare/static * 
